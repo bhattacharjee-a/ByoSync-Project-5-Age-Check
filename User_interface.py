@@ -44,10 +44,12 @@ class User:
 
         model = Model(obj.face)
 
-        img = model.face_detect()
-        cv2.imshow("Face Detection", img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        if logger.debug is True:
+
+            img = model.face_detect()
+            cv2.imshow("Face Detection", img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
         return
 
