@@ -70,16 +70,18 @@ class User:
         else:
             decision = "FAIL"
 
-        '''self.user_info = {
+        if logger.debug is True:
+            self.user_info = {
+                "threshold": self.thresh,
+                "predicted_age": round(age),
+                "is_above_threshold": age >= self.thresh,
+                "confidence": round(confidence, 2),
+                "decision": decision
+                }
+            
+        else:
+            self.user_info = {
             "threshold": self.thresh,
-            "is_above_threshold": age >= self.thresh,
-            "confidence": round(confidence, 2),
-            "decision": decision
-            }'''
-        
-        self.user_info = {
-            "threshold": self.thresh,
-            "predicted_age": round(age),
             "is_above_threshold": age >= self.thresh,
             "confidence": round(confidence, 2),
             "decision": decision
