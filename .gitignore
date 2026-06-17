@@ -34,3 +34,6 @@ Thumbs.db
 
 # Local JSON data (optional if you want to ignore runtime data)
 # data/*.json
+
+uploads/
+requests_log.csv
