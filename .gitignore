@@ -33,10 +33,7 @@ Thumbs.db
 *.log
 
 # Local JSON data (optional if you want to ignore runtime data)
-<<<<<<< HEAD
-=======
 # data/*.json
 
 uploads/
 requests_log.csv
->>>>>>> origin/backend-integration
