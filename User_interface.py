@@ -72,7 +72,7 @@ class User:
         else:
             decision = "FAIL"
 
-        if logger.debug is True:
+        if DEBUG_MODE:
             self.user_info = {
                 "threshold": self.thresh,
                 "predicted_age": round(age),
