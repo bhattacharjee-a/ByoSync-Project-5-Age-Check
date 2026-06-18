@@ -8,10 +8,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
+from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel 
+load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model import Model
 # Configure logging
@@ -30,7 +31,7 @@ LOG_FILE = "requests_log.csv"
 UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-API_TOKEN = "age-check-api-token-2026"  
+API_TOKEN = os.getenv("API_TOKEN")  
 
 # FastAPI app
 app = FastAPI()

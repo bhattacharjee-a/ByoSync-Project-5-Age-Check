@@ -37,3 +37,7 @@ Thumbs.db
 
 uploads/
 requests_log.csv
+
+# Environment variables
+.env
+.env.*
