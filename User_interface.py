@@ -48,7 +48,6 @@ class User:
 
         #if logger.debug is True:
         if DEBUG_MODE:
-        
             img = model.face_detect()
             cv2.imshow("Face Detection", img)
             cv2.waitKey(0)
