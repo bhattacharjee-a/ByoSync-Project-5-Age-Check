@@ -77,7 +77,6 @@ class User:
 
         #print(logger.debug is True)
 
-        #if logger.debug is True:
         if DEBUG_MODE:
             self.user_info = {
                 "threshold": self.thresh,
