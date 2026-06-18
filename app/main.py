@@ -75,12 +75,21 @@ init_log_file()
 
 def estimate_age(file_path: str) -> AgeResult:
     try:
-        img = cv2.imread(file_path)
+        img = cv2.imread(file_path) 
 
         if img is None:
             raise ValueError("Could not read image")
 
-        age = Model(img).age_detection()
+        model = Model(img)
+
+        model.face_detect()
+
+        age = model.age_detection()
+        
+        logger.info("=" * 50)
+        logger.info("AGE CHECK DEBUG")
+        logger.info(f"Predicted Age : {age:.2f}")
+        logger.info("=" * 50)
 
         confidence = 0.90
 
