@@ -33,4 +33,3 @@ Thumbs.db
 *.log
 
 # Local JSON data (optional if you want to ignore runtime data)
-# data/*.json

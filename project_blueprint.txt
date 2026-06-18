@@ -1,0 +1,24 @@
+ByoSync-Project-5-Age-Check/
+│
+├── app/
+│   ├── services.py
+│   ├── main.py
+│   ├── schemas.py
+│   └── storage.py
+│
+├── demo/
+│   └── streamlit_app.py
+│
+├── data/
+│   └── .gitkeep
+│
+├── tests/
+│
+├── docs/
+│   ├── API_Format.md
+│   ├── Team_Tasks.md
+│   └── Project_Requirements.md
+│
+├── README.md
+├── requirements.txt
+└── .gitignore

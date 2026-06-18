@@ -2,10 +2,12 @@
 
 import cv2
 import json
+import logging
 
 import repository
 from project_log import logger
 from model import Model
+from constants import DEBUG_MODE
 
 class User:
 
@@ -44,10 +46,13 @@ class User:
 
         model = Model(obj.face)
 
-        img = model.face_detect()
-        cv2.imshow("Face Detection", img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #if logger.debug is True:
+        if DEBUG_MODE:
+        
+            img = model.face_detect()
+            cv2.imshow("Face Detection", img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
         return
 
@@ -56,9 +61,9 @@ class User:
 
         age = Model(self.face).age_detection()
 
-
         difference = abs(age - self.thresh)
-        confidence = max(0, 1 - difference/20)
+        #confidence = max(0, 1 - difference/20)
+        confidence = min(abs(age-self.thresh)/20,1.0)
         #confidence = min(difference / 10, 1.0)
         
         if difference <= 2:
@@ -70,16 +75,21 @@ class User:
         else:
             decision = "FAIL"
 
-        '''self.user_info = {
+        #print(logger.debug is True)
+
+        #if logger.debug is True:
+        if DEBUG_MODE:
+            self.user_info = {
+                "threshold": self.thresh,
+                "predicted_age": round(age),
+                "is_above_threshold": age >= self.thresh,
+                "confidence": round(confidence, 2),
+                "decision": decision
+                }
+            
+        else:
+            self.user_info = {
             "threshold": self.thresh,
-            "is_above_threshold": age >= self.thresh,
-            "confidence": round(confidence, 2),
-            "decision": decision
-            }'''
-        
-        self.user_info = {
-            "threshold": self.thresh,
-            "predicted_age": round(age),
             "is_above_threshold": age >= self.thresh,
             "confidence": round(confidence, 2),
             "decision": decision
