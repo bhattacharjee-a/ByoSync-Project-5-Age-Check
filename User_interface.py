@@ -47,7 +47,7 @@ class User:
         model = Model(obj.face)
 
         #if logger.debug is True:
-        if DEBUG_MODE:
+        if constants.DEBUG_MODE::
             img = model.face_detect()
             cv2.imshow("Face Detection", img)
             cv2.waitKey(0)
