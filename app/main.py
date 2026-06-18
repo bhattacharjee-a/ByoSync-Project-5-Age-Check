@@ -82,9 +82,9 @@ def estimate_age(file_path: str) -> AgeResult:
 
         model = Model(img)
 
-        model.face_detect()
+        face_crop = model.face_detect()
 
-        age = model.age_detection()
+        age = Model(face_crop).age_detection()
         
         logger.info("=" * 50)
         logger.info("AGE CHECK DEBUG")

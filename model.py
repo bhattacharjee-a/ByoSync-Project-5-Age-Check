@@ -36,19 +36,13 @@ class Model:
             raise ValueError("Multiple faces found")
 
         for (x, y, w, h) in face_coord:
-            
+
             if w < 120 or h < 120:
                 raise ValueError("Face is too small. Please upload a closer image.")
 
-            cv2.rectangle(self.face, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
             face_crop = self.face[y:y+h, x:x+w]
-            age = Model(face_crop).age_detection()
-            label = f"Age: {round(age)}"
 
-            cv2.putText(self.face, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA)
-            
-        return self.face
+            return face_crop
 
     def age_detection(self):
 
