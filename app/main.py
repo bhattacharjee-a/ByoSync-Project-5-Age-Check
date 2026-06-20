@@ -7,7 +7,6 @@ import uuid
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -34,8 +33,13 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 API_TOKEN = os.getenv("API_TOKEN")  
 
 # FastAPI app
-app = FastAPI()
-
+app = FastAPI(
+    title="Age Check API",
+    description="Privacy-preserving boolean age verification API.",
+    version="1.0.0"
+)
+# Stores the last processed request (Admin only)
+LAST_ADMIN_RESULT = None
 # Security
 security = HTTPBearer()
 
@@ -110,7 +114,21 @@ def estimate_age(file_path: str) -> AgeResult:
             detail=f"Model inference failed: {str(e)}"
         )
 
+def calculate_confidence(age: int, threshold: int) -> float:
+    """
+    Calculate confidence based on distance from threshold.
+    Confidence increases as the predicted age moves farther away
+    from the selected threshold.
+    """
 
+    gap = abs(age - threshold)
+
+    confidence = 0.50 + (gap * 0.05)
+
+    confidence = min(confidence, 0.99)
+
+    return round(confidence, 2) 
+    
 def validate_file(file: UploadFile):
     """Validate file type and size"""
     file_ext = Path(file.filename).suffix.lower()
@@ -161,12 +179,6 @@ def home():
 def health():
     return {"status": "ok"}
 
-
-@app.get("/utkarsh")
-def utkarsh():
-    return {"message": "Utkarsh endpoint working"}
-
-
 @app.get("/version")
 def version():
     return {
@@ -188,8 +200,8 @@ async def check_age(
     credentials: HTTPAuthorizationCredentials = Depends(verify_token)
 ):
     start_time = time.time()
-    
-    if threshold not in [18, 21, 60]:
+    VALID_THRESHOLDS = {18, 21, 60}    
+    if threshold not in VALID_THRESHOLDS:
         raise HTTPException(status_code=400, detail="Threshold must be 18, 21, or 60")
     
     try:
@@ -219,7 +231,7 @@ async def check_age(
     try:
         result = estimate_age(file_path)
         age = result.age
-        confidence = result.confidence
+        confidence = calculate_confidence(age, threshold)
     except HTTPException as e:
         try:
             os.remove(file_path)
@@ -230,18 +242,46 @@ async def check_age(
     
     decision = "pass" if age >= threshold else "fail"
     is_above_threshold = age >= threshold
-    
-    log_request(user_id, image.filename, threshold, decision, confidence, 0)
-    
     latency_ms = round((time.time() - start_time) * 1000, 2)
+    log_request(user_id, image.filename, threshold, decision, confidence, latency_ms)
     
+    global LAST_ADMIN_RESULT
+
+    LAST_ADMIN_RESULT = {
+        "estimated_age": round(age, 1),
+        "confidence": confidence,
+        "threshold": threshold,
+        "decision": decision,
+        "is_above_threshold": is_above_threshold,
+        "latency_ms": latency_ms,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "model_used": "Model (DeepFace)"
+    }
+    try:
+        os.remove(file_path)
+        logger.info(f"Deleted uploaded image: {file_path}")
+    except Exception as e:
+        logger.warning(f"Could not delete uploaded image: {e}")
     return AgeCheckResponse(
-    module="age_check",
-    is_above_threshold=is_above_threshold,
-    decision=decision,
-    confidence=confidence,
-    latency_ms=latency_ms
-)
+        module="age_check",
+        is_above_threshold=is_above_threshold,
+        decision=decision,
+        confidence=confidence,
+        latency_ms=latency_ms
+    )
+@app.get("/admin/latest")
+def get_latest_admin_result(
+    credentials: HTTPAuthorizationCredentials = Depends(verify_token)
+):
+    global LAST_ADMIN_RESULT
+
+    if LAST_ADMIN_RESULT is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No age check has been performed yet."
+        )
+
+    return LAST_ADMIN_RESULT
 
 @app.get("/logs")
 def get_logs(limit: int = 50):

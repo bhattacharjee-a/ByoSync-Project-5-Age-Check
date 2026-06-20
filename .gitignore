@@ -41,3 +41,11 @@ requests_log.csv
 # Environment variables
 .env
 .env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables 
+.env
+
