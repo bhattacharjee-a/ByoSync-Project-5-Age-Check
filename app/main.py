@@ -5,6 +5,7 @@ import csv
 import os
 import uuid
 import logging
+from typing import Optional
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -31,7 +32,7 @@ UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 API_TOKEN = os.getenv("API_TOKEN")  
-
+INCONCLUSIVE_MARGIN = 2
 # FastAPI app
 app = FastAPI(
     title="Age Check API",
@@ -54,7 +55,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 # Pydantic schemas
 class AgeCheckResponse(BaseModel):
     module: str
-    is_above_threshold: bool
+    is_above_threshold: Optional[bool]
     decision: str
     confidence: float
     latency_ms: float
@@ -107,11 +108,18 @@ def estimate_age(file_path: str) -> AgeResult:
             confidence=confidence
         )
 
+    except ValueError as e:
+        logger.warning(f"Validation error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
     except Exception as e:
-        logger.error(f"Age estimation failed: {str(e)}")
+        logger.exception("Unexpected error during age estimation")
         raise HTTPException(
             status_code=500,
-            detail=f"Model inference failed: {str(e)}"
+            detail="Internal server error during age estimation."
         )
 
 def calculate_confidence(age: int, threshold: int) -> float:
@@ -128,6 +136,34 @@ def calculate_confidence(age: int, threshold: int) -> float:
     confidence = min(confidence, 0.99)
 
     return round(confidence, 2) 
+
+def validate_image_quality(file_path: str):
+    """
+    Check if the uploaded image is blurry.
+    Raises HTTPException if the image quality is too poor.
+    """
+
+    img = cv2.imread(file_path)
+
+    if img is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not read uploaded image."
+        )
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+    logger.info(f"Blur Score: {blur_score:.2f}")
+
+    BLUR_THRESHOLD = 80
+
+    if blur_score < BLUR_THRESHOLD:
+        raise HTTPException(
+            status_code=400,
+            detail="Image is blurry. Please upload a clearer image."
+        )
     
 def validate_file(file: UploadFile):
     """Validate file type and size"""
@@ -224,6 +260,8 @@ async def check_age(
             content = await image.read() 
             buffer.write(content)
         logger.info(f"Image saved: {file_path}")
+        
+        validate_image_quality(file_path) 
     except Exception as e:
         logger.error(f"Failed to save image: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
@@ -240,10 +278,28 @@ async def check_age(
             pass
         raise e
     
-    decision = "pass" if age >= threshold else "fail"
-    is_above_threshold = age >= threshold
+    margin = 2
+    
+    if abs(age - threshold) <= INCONCLUSIVE_MARGIN:
+        decision = "inconclusive"
+        is_above_threshold = None
+    elif age > threshold:
+        decision = "pass"
+        is_above_threshold = True
+    else:
+        decision = "fail"
+        is_above_threshold = False
+
     latency_ms = round((time.time() - start_time) * 1000, 2)
-    log_request(user_id, image.filename, threshold, decision, confidence, latency_ms)
+
+    log_request(
+        user_id,
+        image.filename,
+        threshold,
+        decision,
+        confidence,
+        latency_ms
+    )
     
     global LAST_ADMIN_RESULT
 
