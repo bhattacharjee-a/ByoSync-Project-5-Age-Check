@@ -1,0 +1,7 @@
+{
+  "threshold": 18,
+  "predicted_age": 28,
+  "is_above_threshold": true,
+  "confidence": 0.5,
+  "decision": "PASS"
+}
