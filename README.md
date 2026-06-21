@@ -312,6 +312,7 @@ Current tests:
 - Verification Logic
 - Testing
 - Documentation
+- Project Reporting
 
 ### Ukarsh Tyagi
 - FastAPI Development
@@ -319,20 +320,20 @@ Current tests:
 - Streamlit Support
 - Testing Support
 
-### Akankhya
+### Akankhya Choudhury
 - UI Design Planning
 - User Experience Review
 
-### Deshna
+### Deshna Dasari
 - Dataset Analysis
 - Testing
 - Validation Support
 
-### Shubhangi
+### Shubhangi Sinha
 - Project Reporting
 - Documentation Support
 
-### Harshita
+### Harshita Goel
 - Team Member
 
 ---
