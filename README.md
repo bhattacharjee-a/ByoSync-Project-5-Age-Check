@@ -122,6 +122,7 @@ Example:
 
 ```
 
+---
 ## Project Structure
 
 ```text
