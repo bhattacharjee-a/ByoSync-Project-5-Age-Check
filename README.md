@@ -272,7 +272,7 @@ Current tests:
 - Testing
 - Documentation
 
-### Utkarsh
+### Ukarsh Tyagi
 - FastAPI Development
 - Integration Support
 - Streamlit Support
