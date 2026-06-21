@@ -280,7 +280,6 @@ Current tests:
 
 ### Akankhya
 - UI Design Planning
-- Documentation Support
 - User Experience Review
 
 ### Deshna
