@@ -79,6 +79,46 @@ Verification results are stored locally using JSON.
 
 No database is required.
 
+## Stretch Goals Completed
+
+### Multiple Boolean Age Checks
+
+The system supports evaluating a single image against multiple age thresholds in one request.
+
+Example thresholds:
+- 18+
+- 21+
+- 60+
+
+Features:
+- Upload one image and evaluate multiple thresholds simultaneously.
+- Public API returns only boolean decisions and confidence values.
+- Exact age remains hidden from public users.
+- Admin/Debug mode can display estimated age for testing.
+- Reduces repeated uploads and improves usability.
+
+Example:
+
+```json
+{
+  "results": [
+    {
+      "threshold": 18,
+      "is_above_threshold": true,
+      "decision": "PASS"
+    },
+    {
+      "threshold": 21,
+      "is_above_threshold": true,
+      "decision": "PASS"
+    },
+    {
+      "threshold": 60,
+      "is_above_threshold": false,
+      "decision": "FAIL"
+    }
+  ]
+}
 ---
 
 ## Project Structure
