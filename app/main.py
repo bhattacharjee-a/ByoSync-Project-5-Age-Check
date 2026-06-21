@@ -5,7 +5,7 @@ import csv
 import os
 import uuid
 import logging
-from typing import Optional
+from typing import Optional, Dict 
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -53,11 +53,16 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 
 # Pydantic schemas
-class AgeCheckResponse(BaseModel):
-    module: str
+
+class ThresholdResult(BaseModel):
     is_above_threshold: Optional[bool]
     decision: str
     confidence: float
+
+
+class AgeCheckResponse(BaseModel):
+    module: str
+    results: Dict[str, ThresholdResult]
     latency_ms: float
 
 
@@ -231,14 +236,22 @@ def version():
 @app.post("/check_age", response_model=AgeCheckResponse)
 async def check_age(
     user_id: str = Form(...),
-    threshold: int = Form(...),
+    thresholds: str = Form(...),
     image: UploadFile = File(...),
     credentials: HTTPAuthorizationCredentials = Depends(verify_token)
 ):
     start_time = time.time()
+    threshold_list = [
+    int(x.strip())
+    for x in thresholds.split(",")
+    ]   
     VALID_THRESHOLDS = {18, 21, 60}    
-    if threshold not in VALID_THRESHOLDS:
-        raise HTTPException(status_code=400, detail="Threshold must be 18, 21, or 60")
+    for threshold in threshold_list:
+        if threshold not in VALID_THRESHOLDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid threshold: {threshold}. Allowed values are 18, 21, or 60."
+            )
     
     try:
         validate_file(image)
@@ -269,7 +282,6 @@ async def check_age(
     try:
         result = estimate_age(file_path)
         age = result.age
-        confidence = calculate_confidence(age, threshold)
     except HTTPException as e:
         try:
             os.remove(file_path)
@@ -278,37 +290,46 @@ async def check_age(
             pass
         raise e
     
-    margin = 2
+    results = {}
     
-    if abs(age - threshold) <= INCONCLUSIVE_MARGIN:
-        decision = "inconclusive"
-        is_above_threshold = None
-    elif age > threshold:
-        decision = "pass"
-        is_above_threshold = True
-    else:
-        decision = "fail"
-        is_above_threshold = False
-
     latency_ms = round((time.time() - start_time) * 1000, 2)
+    
+    for threshold in threshold_list:
 
-    log_request(
-        user_id,
-        image.filename,
-        threshold,
-        decision,
-        confidence,
-        latency_ms
-    )
+        confidence = calculate_confidence(age, threshold)
+
+        if abs(age - threshold) <= INCONCLUSIVE_MARGIN:
+            decision = "inconclusive"
+            is_above_threshold = None
+
+        elif age >= threshold:
+            decision = "pass"
+            is_above_threshold = True
+
+        else:
+            decision = "fail"
+            is_above_threshold = False
+
+        results[f"{threshold}+"] = {
+            "is_above_threshold": is_above_threshold,
+            "decision": decision,
+            "confidence": confidence,
+        }
+
+        log_request(
+            user_id,
+            image.filename,
+            threshold,
+            decision,
+            confidence,
+            latency_ms
+        )
     
     global LAST_ADMIN_RESULT
-
     LAST_ADMIN_RESULT = {
         "estimated_age": round(age, 1),
-        "confidence": confidence,
-        "threshold": threshold,
-        "decision": decision,
-        "is_above_threshold": is_above_threshold,
+        "thresholds": threshold_list,
+        "results": results,
         "latency_ms": latency_ms,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "model_used": "Model (DeepFace)"
@@ -320,9 +341,10 @@ async def check_age(
         logger.warning(f"Could not delete uploaded image: {e}")
     return AgeCheckResponse(
         module="age_check",
-        is_above_threshold=is_above_threshold,
-        decision=decision,
-        confidence=confidence,
+        results={
+            key: ThresholdResult(**value)
+            for key, value in results.items()
+        },
         latency_ms=latency_ms
     )
 @app.get("/admin/latest")
