@@ -999,23 +999,24 @@ elif page == "Age Check":
             )
 
     with param_col:
-        preset = st.selectbox(
-            "Age Threshold",
-            [18, 21, 60],
-            index=0,
-            help="Select the threshold for Boolean Age Check."
+        selected_thresholds = st.multiselect(
+            "Select Threshold(s)",
+            options=[18, 21, 60],
+            default=[18],
+            help="You can select one or more thresholds."
         )
+
         custom = st.number_input(
             "Custom Threshold (0 = none)",
-            min_value=0, max_value=120, value=0, step=1,
+            min_value=0,
+            max_value=120,
+            value=0,
+            step=1,
         )
-        margin = st.slider(
-            "Inconclusive margin ± years",
-            0, 10, 2,
-            help="Estimates within this many years of a threshold are flagged as INCONCLUSIVE "
-                 "rather than a hard yes/no, reflecting model uncertainty near the boundary.",
-        )
-        threshold = custom if custom > 0 else preset
+
+        if custom > 0:
+            if custom not in selected_thresholds:
+                selected_thresholds.append(custom)
 
         st.markdown(
             "<div style='font-family:var(--font-display);font-size:0.72rem;"
@@ -1036,7 +1037,7 @@ elif page == "Age Check":
                 font-size:0.78rem;
                 font-weight:600;
                 color:#60A5FA;">
-                {threshold}+
+                {", ".join(f"{t}+" for t in selected_thresholds)}
             </span>
             """,
             unsafe_allow_html=True,
@@ -1064,7 +1065,7 @@ elif page == "Age Check":
 
             data = {
             "user_id": "demo_user",
-            "threshold": threshold
+            "thresholds": ",".join(map(str, selected_thresholds))
             }
 
             headers = {
@@ -1088,13 +1089,11 @@ elif page == "Age Check":
 
             # Save information for Admin Console
             st.session_state.admin_result = {
-                "threshold": threshold,
-                "decision": result["decision"],
-                "confidence": result["confidence"],
-                "is_above_threshold": result["is_above_threshold"],
+                "thresholds": selected_thresholds,
+                "results": result["results"],
                 "latency_ms": result["latency_ms"],
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-          }
+            }
 
             st.session_state.last_bgr = bgr.copy()
             st.session_state.last_age = None
@@ -1114,17 +1113,23 @@ elif page == "Age Check":
             )
             st.session_state.activity_log.append({
                 "ts": datetime.now().isoformat(timespec="seconds"),
-                "threshold": threshold,
+                "threshold": selected_thresholds,
                 "results": "no_face",
             })
         else:
-            cols = st.columns(1)
+
+            results = result["results"]
+
+            cols = st.columns(len(results))
             results_for_log = {}
 
-            with cols[0]:
-                decision = result["decision"]
-                confidence = result["confidence"]
+            for col, (threshold_label, value) in zip(cols, results.items()):
 
+                decision = value["decision"]
+                confidence = value["confidence"]
+                is_above = value["is_above_threshold"]
+
+                # Convert backend decision to UI decision
                 if decision == "pass":
                     d = "yes"
                 elif decision == "fail":
@@ -1133,20 +1138,44 @@ elif page == "Age Check":
                     d = "inconclusive"
 
                 c = confidence
-                results_for_log[str(threshold)] = {"decision": d, "confidence": round(c, 3)}
+                results_for_log[threshold_label] = {
+                    "decision": decision,
+                    "confidence": round(confidence, 3),
+                    "is_above_threshold": is_above
+                }
+                css_map = {
+                    "yes": "ag-result-yes",
+                    "no": "ag-result-no",
+                    "inconclusive": "ag-result-inconclusive"
+                }
 
-                css_map = {"yes": "ag-result-yes", "no": "ag-result-no",
-                           "inconclusive": "ag-result-inconclusive"}
-                lbl_map = {"yes": "yes", "no": "no", "inconclusive": "inc"}
-                icon    = {"yes": "✅", "no": "❌", "inconclusive": "❓"}
-                txt     = {"yes": "Above Threshold", "no": "Below Threshold",
-                           "inconclusive": "Inconclusive"}
-                bool_v = str(result["is_above_threshold"]).lower()
+                lbl_map = {
+                    "yes": "yes",
+                    "no": "no",
+                    "inconclusive": "inc"
+                }
 
-                with cols[0]:
+                icon = {
+                    "yes": "✅",
+                    "no": "❌",
+                    "inconclusive": "❓"
+                }
+
+                txt = {
+                    "yes": "Above Threshold",
+                    "no": "Below Threshold",
+                    "inconclusive": "Inconclusive"
+                }
+
+                if is_above is None:
+                    bool_v = "null"
+                else:
+                    bool_v = str(is_above).lower()
+                
+                with col:
                     st.markdown(
                         f"""<div class="{css_map[d]}" style="text-align:center">
-                          <div class="ag-verdict-label {lbl_map[d]}">Threshold {threshold}+</div>
+                          <div class="ag-verdict-label {lbl_map[d]}">Threshold {threshold_label}</div>
                           <div style="font-size:2.2rem;margin:0.4rem 0">{icon[d]}</div>
                           <div class="ag-verdict-text">{txt[d]}</div>
                           <div style="font-family:var(--font-mono);font-size:0.8rem;
@@ -1163,9 +1192,9 @@ elif page == "Age Check":
                         unsafe_allow_html=True,
                     )
 
+
             hr()
 
-            # ── API-style payload ───────────────────────────────────────────
             ag_card_open("API response payload — sent to normal callers")
 
             import json
@@ -1173,28 +1202,22 @@ elif page == "Age Check":
             st.code(
                 json.dumps(result, indent=4),
                 language="json"
-          )
-            
+            )
+
             st.markdown(
                 "<div style='font-family:var(--font-body);font-size:0.8rem;"
                 "color:#10B981;margin-top:0.6rem'>"
                 "✓ No <code>estimated_age</code> field anywhere in this response.</div>",
                 unsafe_allow_html=True,
             )
+
             ag_card_close()
 
             st.session_state.activity_log.append({
                 "ts": datetime.now().isoformat(timespec="seconds"),
-                "threshold": threshold,
-                "results": {
-                    str(threshold): {
-                        "decision": result["decision"],
-                        "confidence": result["confidence"],
-                        "is_above_threshold": result["is_above_threshold"],
-                        "latency_ms": result["latency_ms"],
-                    }
-                },
-            })
+                "threshold": selected_thresholds,
+                "results": results_for_log,
+            }) 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1251,20 +1274,20 @@ elif page == "Admin Console":
 
             with m1:
                 st.metric(
-                    "Latest Decision",
-                    admin_data["decision"].upper()
+                    "Thresholds",
+                    ", ".join(f"{t}+" for t in admin_data["thresholds"])
                 )
 
             with m2:
                 st.metric(
-                    "Confidence",
-                    f"{admin_data['confidence']:.0%}"
+                    "Estimated Age",
+                    f"{admin_data['estimated_age']} yrs"
                 )
 
             with m3:
                 st.metric(
-                    "Threshold",
-                    f"{admin_data['threshold']}+"
+                    "Latency",
+                    f"{admin_data['latency_ms']} ms"
                 )
 
             ag_card_close()
@@ -1287,8 +1310,6 @@ elif page == "Admin Console":
             with right_col:
 
                 col1, col2 = st.columns(2)
-                
-                col1, col2 = st.columns(2)
               
             with col1:
                 st.metric(
@@ -1297,21 +1318,21 @@ elif page == "Admin Console":
                 )
 
                 st.metric(
-                    "Threshold",
-                    f"{admin_data['threshold']}+"
+                    "Thresholds",
+                    ", ".join(f"{t}+" for t in admin_data["thresholds"])
                 )
 
-                st.metric(
-                    "Decision",
-                    admin_data["decision"].upper()
-                )
+                st.write("### Results")
+
+                for threshold, value in admin_data["results"].items():
+                    st.write(
+                        f"**{threshold}** → "
+                        f"{value['decision'].upper()} "
+                        f"({value['confidence']:.0%})"
+                    )
 
             with col2:
-                st.metric(
-                    "Confidence",
-                    f"{admin_data['confidence']:.0%}"
-                )
-
+    
                 st.metric(
                     "Latency",
                     f"{admin_data['latency_ms']} ms"
