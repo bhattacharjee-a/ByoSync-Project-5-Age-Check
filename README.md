@@ -119,6 +119,7 @@ Example:
     }
   ]
 }
+---
 ```
 
 ## Project Structure
