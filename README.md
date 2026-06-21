@@ -262,7 +262,7 @@ Current tests:
 
 ## Team Members
 
-### Sourav D'cruz
+### Abhiroop Bhattacharjee
 - Project Architecture
 - Age Detection Module
 - Face Detection Module
@@ -289,7 +289,8 @@ Current tests:
 - Validation Support
 
 ### Shubhangi
-- Team Member
+- Project Reporting
+- Documentation Support
 
 ### Harshita
 - Team Member
