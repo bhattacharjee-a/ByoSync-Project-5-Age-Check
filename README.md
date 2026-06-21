@@ -253,7 +253,6 @@ Current tests:
 ## Future Improvements
 
 - Streamlit User Interface
-- Multiple threshold checks in one request
 - InsightFace integration
 - Activity log dashboard
 - Batch image processing
