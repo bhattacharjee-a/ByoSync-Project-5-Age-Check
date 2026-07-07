@@ -65,23 +65,3 @@ class Model:
         logger.debug(f"Predicted Age: {age}")
 
         return age
-
-    
-        '''
-        difference = abs(age - threshold)
-        confidence = min(difference / 10, 1.0)
-
-        if difference <= 2:
-            decision = "INCONCLUSIVE"
-
-        elif age >= threshold:
-            decision = "ALLOW"
-
-        else:
-            decision = "NOT ALLOW"
-
-        return {
-            "age": age,
-            "confidence": round(confidence, 2),
-            "decision": decision
-        }'''
